@@ -81,16 +81,26 @@ export function usePayment() {
       try {
         setProcessing(true)
 
+        // Calculate the actual payment amount first
         const isStripe = isStripePayment(paymentType)
-        const amount = Math.floor(topupAmount)
+        const isPancake = isWaffoPancakePayment(paymentType)
+        const amountResponse = isStripe
+          ? await calculateStripeAmount({ amount: topupAmount })
+          : isPancake
+            ? await calculateWaffoPancakeAmount({ amount: topupAmount })
+            : await calculateAmount({ amount: topupAmount })
+
+        const calculatedAmount = isApiSuccess(amountResponse) && amountResponse.data
+          ? Math.floor(parseFloat(amountResponse.data))
+          : Math.floor(topupAmount)
 
         const response = isStripe
           ? await requestStripePayment({
-              amount,
+              amount: calculatedAmount,
               payment_method: 'stripe',
             })
           : await requestPayment({
-              amount,
+              amount: calculatedAmount,
               payment_method: paymentType,
             })
 
